@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>세계 시간 - 전 세계 주요 도시</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            width: 300px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .filter-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            background: white;
+            color: #667eea;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        }
+
+        .filter-btn.active {
+            background: #764ba2;
+            color: white;
+        }
+
+        .region-section {
+            margin-bottom: 40px;
+        }
+
+        .region-title {
+            color: white;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            padding-left: 10px;
+            border-left: 5px solid white;
+        }
+
+        .clock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+
+        .clock-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .clock-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .clock-card.hidden {
+            display: none;
+        }
+
+        .city-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .country-name {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        .time-display {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 6px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .date-display {
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 4px;
+        }
+
+        .timezone-display {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .current-location {
+            border: 3px solid #667eea;
+        }
+
+        .current-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            margin-left: 5px;
+        }
+
+        .stats {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌍 세계 시간</h1>
+            <div class="subtitle">전 세계 100개 이상의 주요 도시 시간</div>
+        </header>
+
+        <div class="controls">
+            <input type="text" class="search-box" id="searchBox" placeholder="도시 또는 국가 검색...">
+            <button class="filter-btn active" onclick="filterRegion('all')">전체</button>
+            <button class="filter-btn" onclick="filterRegion('asia')">아시아</button>
+            <button class="filter-btn" onclick="filterRegion('europe')">유럽</button>
+            <button class="filter-btn" onclick="filterRegion('americas')">아메리카</button>
+            <button class="filter-btn" onclick="filterRegion('africa')">아프리카</button>
+            <button class="filter-btn" onclick="filterRegion('oceania')">오세아니아</button>
+        </div>
+
+        <div class="stats" id="stats"></div>
+
+        <div id="clockContainer"></div>
+    </div>
+
+    <script>
+        const cities = {
+            asia: [
+                { name: '서울', country: '대한민국', timezone: 'Asia/Seoul' },
+                { name: '부산', country: '대한민국', timezone: 'Asia/Seoul' },
+                { name: '평양', country: '북한', timezone: 'Asia/Pyongyang' },
+                { name: '도쿄', country: '일본', timezone: 'Asia/Tokyo' },
+                { name: '오사카', country: '일본', timezone: 'Asia/Tokyo' },
+                { name: '베이징', country: '중국', timezone: 'Asia/Shanghai' },
+                { name: '상하이', country: '중국', timezone: 'Asia/Shanghai' },
+                { name: '홍콩', country: '중국', timezone: 'Asia/Hong_Kong' },
+                { name: '타이베이', country: '대만', timezone: 'Asia/Taipei' },
+                { name: '마카오', country: '중국', timezone: 'Asia/Macau' },
+                { name: '싱가포르', country: '싱가포르', timezone: 'Asia/Singapore' },
+                { name: '방콕', country: '태국', timezone: 'Asia/Bangkok' },
+                { name: '하노이', country: '베트남', timezone: 'Asia/Ho_Chi_Minh' },
+                { name: '호치민', country: '베트남', timezone: 'Asia/Ho_Chi_Minh' },
+                { name: '마닐라', country: '필리핀', timezone: 'Asia/Manila' },
+                { name: '자카르타', country: '인도네시아', timezone: 'Asia/Jakarta' },
+                { name: '발리', country: '인도네시아', timezone: 'Asia/Makassar' },
+                { name: '쿠알라룸푸르', country: '말레이시아', timezone: 'Asia/Kuala_Lumpur' },
+                { name: '양곤', country: '미얀마', timezone: 'Asia/Yangon' },
+                { name: '프놈펜', country: '캄보디아', timezone: 'Asia/Phnom_Penh' },
+                { name: '비엔티안', country: '라오스', timezone: 'Asia/Vientiane' },
+                { name: '뉴델리', country: '인도', timezone: 'Asia/Kolkata' },
+                { name: '뭄바이', country: '인도', timezone: 'Asia/Kolkata' },
+                { name: '방갈로르', country: '인도', timezone: 'Asia/Kolkata' },
+                { name: '다카', country: '방글라데시', timezone: 'Asia/Dhaka' },
+                { name: '카트만두', country: '네팔', timezone: 'Asia/Kathmandu' },
+                { name: '이슬라마바드', country: '파키스탄', timezone: 'Asia/Karachi' },
+                { name: '카라치', country: '파키스탄', timezone: 'Asia/Karachi' },
+                { name: '카불', country: '아프가니스탄', timezone: 'Asia/Kabul' },
+                { name: '테헤란', country: '이란', timezone: 'Asia/Tehran' },
+                { name: '바그다드', country: '이라크', timezone: 'Asia/Baghdad' },
+                { name: '다마스쿠스', country: '시리아', timezone: 'Asia/Damascus' },
+                { name: '베이루트', country: '레바논', timezone: 'Asia/Beirut' },
+                { name: '암만', country: '요르단', timezone: 'Asia/Amman' },
+                { name: '예루살렘', country: '이스라엘', timezone: 'Asia/Jerusalem' },
+                { name: '텔아비브', country: '이스라엘', timezone: 'Asia/Jerusalem' },
+                { name: '두바이', country: 'UAE', timezone: 'Asia/Dubai' },
+                { name: '아부다비', country: 'UAE', timezone: 'Asia/Dubai' },
+                { name: '도하', country: '카타르', timezone: 'Asia/Qatar' },
+                { name: '쿠웨이트', country: '쿠웨이트', timezone: 'Asia/Kuwait' },
+                { name: '리야드', country: '사우디', timezone: 'Asia/Riyadh' },
+                { name: '제다', country: '사우디', timezone: 'Asia/Riyadh' },
+                { name: '무스카트', country: '오만', timezone: 'Asia/Muscat' },
+                { name: '예레반', country: '아르메니아', timezone: 'Asia/Yerevan' },
+                { name: '트빌리시', country: '조지아', timezone: 'Asia/Tbilisi' },
+                { name: '바쿠', country: '아제르바이잔', timezone: 'Asia/Baku' },
+                { name: '타슈켄트', country: '우즈베키스탄', timezone: 'Asia/Tashkent' },
+                { name: '알마티', country: '카자흐스탄', timezone: 'Asia/Almaty' },
+                { name: '울란바토르', country: '몽골', timezone: 'Asia/Ulaanbaatar' },
+            ],
+            europe: [
+                { name: '런던', country: '영국', timezone: 'Europe/London' },
+                { name: '에딘버러', country: '영국', timezone: 'Europe/London' },
+                { name: '더블린', country: '아일랜드', timezone: 'Europe/Dublin' },
+                { name: '파리', country: '프랑스', timezone: 'Europe/Paris' },
+                { name: '마르세유', country: '프랑스', timezone: 'Europe/Paris' },
+                { name: '리옹', country: '프랑스', timezone: 'Europe/Paris' },
+                { name: '베를린', country: '독일', timezone: 'Europe/Berlin' },
+                { name: '뮌헨', country: '독일', timezone: 'Europe/Berlin' },
+                { name: '함부르크', country: '독일', timezone: 'Europe/Berlin' },
+                { name: '프랑크푸르트', country: '독일', timezone: 'Europe/Berlin' },
+                { name: '로마', country: '이탈리아', timezone: 'Europe/Rome' },
+                { name: '밀라노', country: '이탈리아', timezone: 'Europe/Rome' },
+                { name: '베네치아', country: '이탈리아', timezone: 'Europe/Rome' },
+                { name: '피렌체', country: '이탈리아', timezone: 'Europe/Rome' },
+                { name: '마드리드', country: '스페인', timezone: 'Europe/Madrid' },
+                { name: '바르셀로나', country: '스페인', timezone: 'Europe/Madrid' },
+                { name: '세비야', country: '스페인', timezone: 'Europe/Madrid' },
+                { name: '리스본', country: '포르투갈', timezone: 'Europe/Lisbon' },
+                { name: '암스테르담', country: '네덜란드', timezone: 'Europe/Amsterdam' },
+                { name: '브뤼셀', country: '벨기에', timezone: 'Europe/Brussels' },
+                { name: '룩셈부르크', country: '룩셈부르크', timezone: 'Europe/Luxembourg' },
+                { name: '취리히', country: '스위스', timezone: 'Europe/Zurich' },
+                { name: '제네바', country: '스위스', timezone: 'Europe/Zurich' },
+                { name: '빈', country: '오스트리아', timezone: 'Europe/Vienna' },
+                { name: '프라하', country: '체코', timezone: 'Europe/Prague' },
+                { name: '바르샤바', country: '폴란드', timezone: 'Europe/Warsaw' },
+                { name: '부다페스트', country: '헝가리', timezone: 'Europe/Budapest' },
+                { name: '아테네', country: '그리스', timezone: 'Europe/Athens' },
+                { name: '이스탄불', country: '튀르키예', timezone: 'Europe/Istanbul' },
+                { name: '안카라', country: '튀르키예', timezone: 'Europe/Istanbul' },
+                { name: '모스크바', country: '러시아', timezone: 'Europe/Moscow' },
+                { name: '상트페테르부르크', country: '러시아', timezone: 'Europe/Moscow' },
+                { name: '키이우', country: '우크라이나', timezone: 'Europe/Kiev' },
+                { name: '스톡홀름', country: '스웨덴', timezone: 'Europe/Stockholm' },
+                { name: '오슬로', country: '노르웨이', timezone: 'Europe/Oslo' },
+                { name: '코펜하겐', country: '덴마크', timezone: 'Europe/Copenhagen' },
+                { name: '헬싱키', country: '핀란드', timezone: 'Europe/Helsinki' },
+                { name: '레이캬비크', country: '아이슬란드', timezone: 'Atlantic/Reykjavik' },
+                { name: '부쿠레슈티', country: '루마니아', timezone: 'Europe/Bucharest' },
+                { name: '소피아', country: '불가리아', timezone: 'Europe/Sofia' },
+                { name: '베오그라드', country: '세르비아', timezone: 'Europe/Belgrade' },
+            ],
+            americas: [
+                { name: '뉴욕', country: '미국', timezone: 'America/New_York' },
+                { name: '워싱턴DC', country: '미국', timezone: 'America/New_York' },
+                { name: '보스턴', country: '미국', timezone: 'America/New_York' },
+                { name: '마이애미', country: '미국', timezone: 'America/New_York' },
+                { name: '시카고', country: '미국', timezone: 'America/Chicago' },
+                { name: '휴스턴', country: '미국', timezone: 'America/Chicago' },
+                { name: '댈러스', country: '미국', timezone: 'America/Chicago' },
+                { name: '덴버', country: '미국', timezone: 'America/Denver' },
+                { name: '피닉스', country: '미국', timezone: 'America/Phoenix' },
+                { name: '로스앤젤레스', country: '미국', timezone: 'America/Los_Angeles' },
+                { name: '샌프란시스코', country: '미국', timezone: 'America/Los_Angeles' },
+                { name: '시애틀', country: '미국', timezone: 'America/Los_Angeles' },
+                { name: '라스베이거스', country: '미국', timezone: 'America/Los_Angeles' },
+                { name: '샌디에이고', country: '미국', timezone: 'America/Los_Angeles' },
+                { name: '포틀랜드', country: '미국', timezone: 'America/Los_Angeles' },
+                { name: '앵커리지', country: '미국', timezone: 'America/Anchorage' },
+                { name: '호놀룰루', country: '미국', timezone: 'Pacific/Honolulu' },
+                { name: '토론토', country: '캐나다', timezone: 'America/Toronto' },
+                { name: '몬트리올', country: '캐나다', timezone: 'America/Toronto' },
+                { name: '밴쿠버', country: '캐나다', timezone: 'America/Vancouver' },
+                { name: '캘거리', country: '캐나다', timezone: 'America/Edmonton' },
+                { name: '멕시코시티', country: '멕시코', timezone: 'America/Mexico_City' },
+                { name: '과달라하라', country: '멕시코', timezone: 'America/Mexico_City' },
+                { name: '칸쿤', country: '멕시코', timezone: 'America/Cancun' },
+                { name: '아바나', country: '쿠바', timezone: 'America/Havana' },
+                { name: '킹스턴', country: '자메이카', timezone: 'America/Jamaica' },
+                { name: '산후안', country: '푸에르토리코', timezone: 'America/Puerto_Rico' },
+                { name: '파나마시티', country: '파나마', timezone: 'America/Panama' },
+                { name: '산호세', country: '코스타리카', timezone: 'America/Costa_Rica' },
+                { name: '과테말라시티', country: '과테말라', timezone: 'America/Guatemala' },
+                { name: '보고타', country: '콜롬비아', timezone: 'America/Bogota' },
+                { name: '카라카스', country: '베네수엘라', timezone: 'America/Caracas' },
+                { name: '리마', country: '페루', timezone: 'America/Lima' },
+                { name: '키토', country: '에콰도르', timezone: 'America/Guayaquil' },
+                { name: '라파스', country: '볼리비아', timezone: 'America/La_Paz' },
+                { name: '산티아고', country: '칠레', timezone: 'America/Santiago' },
+                { name: '부에노스아이레스', country: '아르헨티나', timezone: 'America/Argentina/Buenos_Aires' },
+                { name: '몬테비데오', country: '우루과이', timezone: 'America/Montevideo' },
+                { name: '아순시온', country: '파라과이', timezone: 'America/Asuncion' },
+                { name: '상파울루', country: '브라질', timezone: 'America/Sao_Paulo' },
+                { name: '리우데자네이루', country: '브라질', timezone: 'America/Sao_Paulo' },
+                { name: '브라질리아', country: '브라질', timezone: 'America/Sao_Paulo' },
+            ],
+            africa: [
+                { name: '카이로', country: '이집트', timezone: 'Africa/Cairo' },
+                { name: '알렉산드리아', country: '이집트', timezone: 'Africa/Cairo' },
+                { name: '카사블랑카', country: '모로코', timezone: 'Africa/Casablanca' },
+                { name: '마라케시', country: '모로코', timezone: 'Africa/Casablanca' },
+                { name: '알제', country: '알제리', timezone: 'Africa/Algiers' },
+                { name: '튀니스', country: '튀니지', timezone: 'Africa/Tunis' },
+                { name: '트리폴리', country: '리비아', timezone: 'Africa/Tripoli' },
+                { name: '라고스', country: '나이지리아', timezone: 'Africa/Lagos' },
+                { name: '아부자', country: '나이지리아', timezone: 'Africa/Lagos' },
+                { name: '아크라', country: '가나', timezone: 'Africa/Accra' },
+                { name: '다카르', country: '세네갈', timezone: 'Africa/Dakar' },
+                { name: '아비장', country: '코트디부아르', timezone: 'Africa/Abidjan' },
+                { name: '나이로비', country: '케냐', timezone: 'Africa/Nairobi' },
+                { name: '아디스아바바', country: '에티오피아', timezone: 'Africa/Addis_Ababa' },
+                { name: '다르에스살람', country: '탄자니아', timezone: 'Africa/Dar_es_Salaam' },
+                { name: '캄팔라', country: '우간다', timezone: 'Africa/Kampala' },
+                { name: '키갈리', country: '르완다', timezone: 'Africa/Kigali' },
+                { name: '루사카', country: '잠비아', timezone: 'Africa/Lusaka' },
+                { name: '하라레', country: '짐바브웨', timezone: 'Africa/Harare' },
+                { name: '요하네스버그', country: '남아공', timezone: 'Africa/Johannesburg' },
+                { name: '케이프타운', country: '남아공', timezone: 'Africa/Johannesburg' },
+                { name: '더반', country: '남아공', timezone: 'Africa/Johannesburg' },
+                { name: '프리토리아', country: '남아공', timezone: 'Africa/Johannesburg' },
+            ],
+            oceania: [
+                { name: '시드니', country: '호주', timezone: 'Australia/Sydney' },
+                { name: '멜버른', country: '호주', timezone: 'Australia/Melbourne' },
+                { name: '브리즈번', country: '호주', timezone: 'Australia/Brisbane' },
+                { name: '퍼스', country: '호주', timezone: 'Australia/Perth' },
+                { name: '애들레이드', country: '호주', timezone: 'Australia/Adelaide' },
+                { name: '캔버라', country: '호주', timezone: 'Australia/Sydney' },
+                { name: '오클랜드', country: '뉴질랜드', timezone: 'Pacific/Auckland' },
+                { name: '웰링턴', country: '뉴질랜드', timezone: 'Pacific/Auckland' },
+                { name: '크라이스트처치', country: '뉴질랜드', timezone: 'Pacific/Auckland' },
+                { name: '수바', country: '피지', timezone: 'Pacific/Fiji' },
+                { name: '포트모르즈비', country: '파푸아뉴기니', timezone: 'Pacific/Port_Moresby' },
+                { name: '누메아', country: '뉴칼레도니아', timezone: 'Pacific/Noumea' },
+            ]
+        };
+
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        let currentFilter = 'all';
+
+        function updateClocks() {
+            const container = document.getElementById('clockContainer');
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            let totalCities = 0;
+            let visibleCities = 0;
+
+            if (currentFilter === 'all') {
+                container.innerHTML = '';
+                for (const [region, cityList] of Object.entries(cities)) {
+                    const section = document.createElement('div');
+                    section.className = 'region-section';
+                    section.id = region;
+                    
+                    const regionNames = {
+                        asia: '🌏 아시아',
+                        europe: '🇪🇺 유럽',
+                        americas: '🌎 아메리카',
+                        africa: '🌍 아프리카',
+                        oceania: '🌏 오세아니아'
+                    };
+                    
+                    section.innerHTML = `<h2 class="region-title">${regionNames[region]}</h2><div class="clock-grid" id="grid-${region}"></div>`;
+                    container.appendChild(section);
+                }
+            }
+
+            for (const [region, cityList] of Object.entries(cities)) {
+                const grid = document.getElementById(`grid-${region}`);
+                if (!grid) continue;
+                
+                grid.innerHTML = '';
+
+                cityList.forEach(city => {
+                    totalCities++;
+                    const now = new Date();
+                    const isCurrentLocation = city.timezone === userTimezone;
+                    
+                    const matches = searchTerm === '' || 
+                                  city.name.toLowerCase().includes(searchTerm) ||
+                                  city.country.toLowerCase().includes(searchTerm);
+                    
+                    if (!matches) return;
+                    visibleCities++;
+                    
+                    const timeString = now.toLocaleTimeString('ko-KR', {
+                        timeZone: city.timezone,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+
+                    const dateString = now.toLocaleDateString('ko-KR', {
+                        timeZone: city.timezone,
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'short'
+                    });
+
+                    const card = document.createElement('div');
+                    card.className = `clock-card ${isCurrentLocation ? 'current-location' : ''}`;
+                    card.innerHTML = `
+                        <div class="city-name">
+                            ${city.name}
+                            ${isCurrentLocation ? '<span class="current-badge">현재 위치</span>' : ''}
+                        </div>
+                        <div class="country-name">${city.country}</div>
+                        <div class="time-display">${timeString}</div>
+                        <div class="date-display">${dateString}</div>
+                        <div class="timezone-display">${city.timezone}</div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+            document.getElementById('stats').textContent = 
+                `총 ${totalCities}개 도시 중 ${visibleCities}개 표시`;
+        }
+
+        function filterRegion(region) {
+            currentFilter = region;
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            const container = document.getElementById('clockContainer');
+            
+            if (region === 'all') {
+                document.querySelectorAll('.region-section').forEach(section => {
+                    section.style.display = 'block';
+                });
+            } else {
+                document.querySelectorAll('.region-section').forEach(section => {
+                    section.style.display = section.id === region ? 'block' : 'none';
+                });
+            }
+        }
+
+        document.getElementById('searchBox').addEventListener('input', updateClocks);
+
+        updateClocks();
+        setInterval(updateClocks, 1000);
+    </script>
+</body>
+</html>
