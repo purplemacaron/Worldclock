@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>세계 시간 - 전 세계 주요 도시</title>
+    <title>세계 시간 - UTC 기준</title>
     <style>
         * {
             margin: 0;
@@ -46,6 +46,7 @@
             gap: 15px;
             margin-bottom: 30px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .search-box {
@@ -80,6 +81,51 @@
             color: white;
         }
 
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .toggle-label {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #ccc;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #667eea;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(30px);
+        }
+
         .region-section {
             margin-bottom: 40px;
         }
@@ -94,7 +140,7 @@
 
         .clock-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 18px;
             margin-bottom: 30px;
         }
@@ -109,10 +155,6 @@
 
         .clock-card:hover {
             transform: translateY(-5px);
-        }
-
-        .clock-card.hidden {
-            display: none;
         }
 
         .city-name {
@@ -139,12 +181,36 @@
         .date-display {
             font-size: 0.9rem;
             color: #555;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
+        }
+
+        .utc-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .utc-offset {
+            font-size: 0.9rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .dst-badge {
+            display: inline-block;
+            background: #ff9800;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
         }
 
         .timezone-display {
             font-size: 0.8rem;
             color: #888;
+            margin-top: 4px;
         }
 
         .current-location {
@@ -167,13 +233,41 @@
             margin-bottom: 20px;
             font-size: 1.1rem;
         }
+
+        .utc-reference {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .utc-reference h2 {
+            color: #667eea;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .utc-time {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #764ba2;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 8px;
+        }
+
+        .utc-date {
+            font-size: 1.1rem;
+            color: #555;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🌍 세계 시간</h1>
-            <div class="subtitle">전 세계 100개 이상의 주요 도시 시간</div>
+            <h1>🌍 세계 시간 (UTC 기준)</h1>
+            <div class="subtitle">전 세계 150개 이상의 주요 도시 시간 - UTC 오프셋 및 서머타임 표시</div>
         </header>
 
         <div class="controls">
@@ -184,9 +278,21 @@
             <button class="filter-btn" onclick="filterRegion('americas')">아메리카</button>
             <button class="filter-btn" onclick="filterRegion('africa')">아프리카</button>
             <button class="filter-btn" onclick="filterRegion('oceania')">오세아니아</button>
+            <div class="toggle-container">
+                <span class="toggle-label">UTC 시간 표시</span>
+                <div class="toggle-switch" id="utcToggle" onclick="toggleUTCMode()">
+                    <div class="toggle-slider"></div>
+                </div>
+            </div>
         </div>
 
         <div class="stats" id="stats"></div>
+
+        <div class="utc-reference" id="utcReference">
+            <h2>⏰ 현재 UTC 시간</h2>
+            <div class="utc-time" id="currentUtcTime">--:--:--</div>
+            <div class="utc-date" id="currentUtcDate">----</div>
+        </div>
 
         <div id="clockContainer"></div>
     </div>
@@ -374,6 +480,64 @@
 
         const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         let currentFilter = 'all';
+        let showUTCMode = false;
+
+        function getUTCOffset(timezone, date) {
+            const localDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
+            const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+            const offsetMinutes = (localDate - utcDate) / (1000 * 60);
+            const hours = Math.floor(Math.abs(offsetMinutes) / 60);
+            const minutes = Math.abs(offsetMinutes) % 60;
+            const sign = offsetMinutes >= 0 ? '+' : '-';
+            
+            if (minutes === 0) {
+                return `UTC${sign}${hours}`;
+            } else {
+                return `UTC${sign}${hours}:${minutes.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function isDST(timezone, date) {
+            const january = new Date(date.getFullYear(), 0, 1);
+            const july = new Date(date.getFullYear(), 6, 1);
+            
+            const janOffset = getUTCOffsetMinutes(timezone, january);
+            const julOffset = getUTCOffsetMinutes(timezone, july);
+            const currentOffset = getUTCOffsetMinutes(timezone, date);
+            
+            const stdOffset = Math.min(janOffset, julOffset);
+            
+            return currentOffset > stdOffset;
+        }
+
+        function getUTCOffsetMinutes(timezone, date) {
+            const localDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
+            const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+            return (localDate - utcDate) / (1000 * 60);
+        }
+
+        function updateUTCReference() {
+            const now = new Date();
+            
+            const utcTimeString = now.toLocaleTimeString('ko-KR', {
+                timeZone: 'UTC',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+
+            const utcDateString = now.toLocaleDateString('ko-KR', {
+                timeZone: 'UTC',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'short'
+            });
+
+            document.getElementById('currentUtcTime').textContent = utcTimeString;
+            document.getElementById('currentUtcDate').textContent = utcDateString;
+        }
 
         function updateClocks() {
             const container = document.getElementById('clockContainer');
@@ -381,8 +545,7 @@
             let totalCities = 0;
             let visibleCities = 0;
 
-            if (currentFilter === 'all') {
-                container.innerHTML = '';
+            if (currentFilter === 'all' && container.innerHTML === '') {
                 for (const [region, cityList] of Object.entries(cities)) {
                     const section = document.createElement('div');
                     section.className = 'region-section';
@@ -419,21 +582,42 @@
                     if (!matches) return;
                     visibleCities++;
                     
-                    const timeString = now.toLocaleTimeString('ko-KR', {
-                        timeZone: city.timezone,
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: false
-                    });
+                    let timeString, dateString;
+                    
+                    if (showUTCMode) {
+                        timeString = now.toLocaleTimeString('ko-KR', {
+                            timeZone: 'UTC',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false
+                        });
+                        dateString = now.toLocaleDateString('ko-KR', {
+                            timeZone: 'UTC',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            weekday: 'short'
+                        });
+                    } else {
+                        timeString = now.toLocaleTimeString('ko-KR', {
+                            timeZone: city.timezone,
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false
+                        });
+                        dateString = now.toLocaleDateString('ko-KR', {
+                            timeZone: city.timezone,
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            weekday: 'short'
+                        });
+                    }
 
-                    const dateString = now.toLocaleDateString('ko-KR', {
-                        timeZone: city.timezone,
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        weekday: 'short'
-                    });
+                    const utcOffset = getUTCOffset(city.timezone, now);
+                    const hasDST = isDST(city.timezone, now);
 
                     const card = document.createElement('div');
                     card.className = `clock-card ${isCurrentLocation ? 'current-location' : ''}`;
@@ -445,6 +629,12 @@
                         <div class="country-name">${city.country}</div>
                         <div class="time-display">${timeString}</div>
                         <div class="date-display">${dateString}</div>
+                        <div class="utc-info">
+                            <div class="utc-offset">
+                                ${utcOffset}
+                                ${hasDST ? '<span class="dst-badge">서머타임 적용 중</span>' : ''}
+                            </div>
+                        </div>
                         <div class="timezone-display">${city.timezone}</div>
                     `;
                     grid.appendChild(card);
@@ -463,8 +653,6 @@
             });
             event.target.classList.add('active');
 
-            const container = document.getElementById('clockContainer');
-            
             if (region === 'all') {
                 document.querySelectorAll('.region-section').forEach(section => {
                     section.style.display = 'block';
@@ -476,10 +664,21 @@
             }
         }
 
+        function toggleUTCMode() {
+            showUTCMode = !showUTCMode;
+            const toggle = document.getElementById('utcToggle');
+            toggle.classList.toggle('active');
+            updateClocks();
+        }
+
         document.getElementById('searchBox').addEventListener('input', updateClocks);
 
+        updateUTCReference();
         updateClocks();
-        setInterval(updateClocks, 1000);
+        setInterval(() => {
+            updateUTCReference();
+            updateClocks();
+        }, 1000);
     </script>
 </body>
-</html>
+</html> 
