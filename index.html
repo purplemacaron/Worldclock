@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>세계 시각 - UTC 기준 + 지도 보기</title>
+    <title>세계 시간 - UTC 기준 + 지도 보기</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -32,17 +32,83 @@
 
         header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         h1 {
             font-size: 2.5rem;
-            margin-bottom: 0;
+            margin-bottom: 15px;
             color: #333;
         }
 
         body.dark-mode h1 {
             color: #ffffff;
+        }
+
+        .language-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .lang-btn {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        body.dark-mode .lang-btn {
+            background: #2a2a2a;
+            border-color: #444;
+        }
+
+        .lang-btn:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .lang-btn.active {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .time-diff-display {
+            background: white;
+            border-radius: 12px;
+            padding: 15px 25px;
+            margin-bottom: 25px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        body.dark-mode .time-diff-display {
+            background: #2a2a2a;
+            border-color: #444;
+        }
+
+        .time-diff-display h3 {
+            color: #667eea;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .time-diff-display p {
+            color: #333;
+            font-size: 0.95rem;
+        }
+
+        body.dark-mode .time-diff-display p {
+            color: #ccc;
         }
 
         .controls {
@@ -137,6 +203,46 @@
         .dark-mode-toggle:hover {
             border-color: #667eea;
             transform: scale(1.1);
+        }
+
+        .favorites-toggle {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body.dark-mode .favorites-toggle {
+            background: #2a2a2a;
+            border-color: #444;
+        }
+
+        .favorites-toggle:hover {
+            border-color: #667eea;
+            transform: scale(1.1);
+        }
+
+        .favorites-toggle.active {
+            background: #667eea;
+            border-color: #667eea;
+        }
+
+        .favorite-star {
+            cursor: pointer;
+            font-size: 1.2rem;
+            margin-left: 8px;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .favorite-star:hover {
+            transform: scale(1.2);
         }
 
         .view-tabs {
@@ -297,6 +403,13 @@
             color: #667eea;
             margin-bottom: 6px;
             font-variant-numeric: tabular-nums;
+        }
+
+        .time-diff {
+            font-size: 0.85rem;
+            color: #ff9800;
+            font-weight: 600;
+            margin-top: 5px;
         }
 
         .date-display {
@@ -522,22 +635,34 @@
 <body>
     <div class="container">
         <header>
-            <h1>🌍 세계 시각</h1>
+            <h1 id="mainTitle">🌍 세계 시간</h1>
+            <div class="language-selector">
+                <button class="lang-btn active" onclick="changeLanguage('ko')" title="한국어">🇰🇷</button>
+                <button class="lang-btn" onclick="changeLanguage('en')" title="English">🇬🇧</button>
+                <button class="lang-btn" onclick="changeLanguage('fr')" title="Français">🇫🇷</button>
+                <button class="lang-btn" onclick="changeLanguage('es')" title="Español">🇪🇸</button>
+                <button class="lang-btn" onclick="changeLanguage('ru')" title="Русский">🇷🇺</button>
+                <button class="lang-btn" onclick="changeLanguage('zh')" title="中文">🇨🇳</button>
+                <button class="lang-btn" onclick="changeLanguage('ar')" title="العربية">🇸🇦</button>
+            </div>
         </header>
 
         <div class="view-tabs">
-            <button class="view-tab active" onclick="switchView('list')">📋 목록 보기</button>
-            <button class="view-tab" onclick="switchView('map')">🗺️ 지도 보기</button>
+            <button class="view-tab active" onclick="switchView('list')"><span id="listViewBtn">📋 목록 보기</span></button>
+            <button class="view-tab" onclick="switchView('map')"><span id="mapViewBtn">🗺️ 지도 보기</span></button>
         </div>
 
         <div class="controls">
             <input type="text" class="search-box" id="searchBox" placeholder="도시 또는 국가 검색...">
-            <button class="filter-btn active" onclick="filterRegion('all')">전체</button>
-            <button class="filter-btn" onclick="filterRegion('asia')">아시아</button>
-            <button class="filter-btn" onclick="filterRegion('europe')">유럽</button>
-            <button class="filter-btn" onclick="filterRegion('americas')">아메리카</button>
-            <button class="filter-btn" onclick="filterRegion('africa')">아프리카</button>
-            <button class="filter-btn" onclick="filterRegion('oceania')">오세아니아</button>
+            <button class="filter-btn active" onclick="filterRegion('all')"><span id="filterAll">전체</span></button>
+            <button class="filter-btn" onclick="filterRegion('asia')"><span id="filterAsia">아시아</span></button>
+            <button class="filter-btn" onclick="filterRegion('europe')"><span id="filterEurope">유럽</span></button>
+            <button class="filter-btn" onclick="filterRegion('americas')"><span id="filterAmericas">아메리카</span></button>
+            <button class="filter-btn" onclick="filterRegion('africa')"><span id="filterAfrica">아프리카</span></button>
+            <button class="filter-btn" onclick="filterRegion('oceania')"><span id="filterOceania">오세아니아</span></button>
+            <button class="favorites-toggle" onclick="toggleFavorites()" title="즐겨찾기">
+                <span id="favoritesIcon">⭐</span>
+            </button>
             <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="다크모드 전환">
                 <span id="darkModeIcon">🌙</span>
             </button>
@@ -546,7 +671,7 @@
         <div class="stats" id="stats"></div>
 
         <div class="utc-reference" id="utcReference">
-            <h2>⏰ 현재 UTC 시각</h2>
+            <h2>⏰ 현재 UTC 시간</h2>
             <div class="utc-time" id="currentUtcTime">--:--:--</div>
             <div class="utc-date" id="currentUtcDate">----</div>
         </div>
@@ -583,6 +708,341 @@
     </div>
 
     <script>
+        const cityTranslations = {
+            ko: {
+                // 이미 한국어는 기본값으로 사용
+            },
+            en: {
+                '대한민국': 'South Korea',
+                '북한': 'North Korea',
+                '일본': 'Japan',
+                '중국': 'China',
+                '대만': 'Taiwan',
+                '몽골': 'Mongolia',
+                '싱가포르': 'Singapore',
+                '태국': 'Thailand',
+                '베트남': 'Vietnam',
+                '필리핀': 'Philippines',
+                '인도네시아': 'Indonesia',
+                '말레이시아': 'Malaysia',
+                '미얀마': 'Myanmar',
+                '캄보디아': 'Cambodia',
+                '라오스': 'Laos',
+                '브루나이': 'Brunei',
+                '동티모르': 'East Timor',
+                '인도': 'India',
+                '방글라데시': 'Bangladesh',
+                '네팔': 'Nepal',
+                '파키스탄': 'Pakistan',
+                '스리랑카': 'Sri Lanka',
+                '몰디브': 'Maldives',
+                '부탄': 'Bhutan',
+                '아프가니스탄': 'Afghanistan',
+                '영국': 'United Kingdom',
+                '아일랜드': 'Ireland',
+                '프랑스': 'France',
+                '벨기에': 'Belgium',
+                '네덜란드': 'Netherlands',
+                '독일': 'Germany',
+                '에스파냐': 'Spain',
+                '러시아': 'Russia'
+            }
+        };
+
+        const translations = {
+            ko: {
+                title: '🌍 세계 시간',
+                listView: '📋 목록 보기',
+                mapView: '🗺️ 지도 보기',
+                searchPlaceholder: '도시 또는 국가 검색...',
+                filterAll: '전체',
+                filterAsia: '아시아',
+                filterEurope: '유럽',
+                filterAmericas: '아메리카',
+                filterAfrica: '아프리카',
+                filterOceania: '오세아니아',
+                utcTime: '⏰ 현재 UTC 시간',
+                mapTitle: '🗺️ 세계 지도에서 보기',
+                legendTitle: '대륙별 색상',
+                asia: '🌏 아시아',
+                europe: '🇪🇺 유럽',
+                americas: '🌎 아메리카',
+                africa: '🌍 아프리카',
+                oceania: '🌏 오세아니아',
+                currentLocation: '현재 위치',
+                dstActive: '서머타임 적용 중',
+                showing: '개 표시',
+                totalCities: '총',
+                citiesOf: '개 도시 중',
+                timeDiffAhead: '빠름',
+                timeDiffBehind: '느림',
+                sameTime: '동일한 시간',
+                hour: '시간',
+                minute: '분'
+            },
+            en: {
+                title: '🌍 World Clock',
+                listView: '📋 List View',
+                mapView: '🗺️ Map View',
+                searchPlaceholder: 'Search city or country...',
+                filterAll: 'All',
+                filterAsia: 'Asia',
+                filterEurope: 'Europe',
+                filterAmericas: 'Americas',
+                filterAfrica: 'Africa',
+                filterOceania: 'Oceania',
+                utcTime: '⏰ Current UTC Time',
+                mapTitle: '🗺️ View on World Map',
+                legendTitle: 'Colors by Continent',
+                asia: '🌏 Asia',
+                europe: '🇪🇺 Europe',
+                americas: '🌎 Americas',
+                africa: '🌍 Africa',
+                oceania: '🌏 Oceania',
+                currentLocation: 'Your Location',
+                dstActive: 'DST Active',
+                showing: 'showing',
+                totalCities: 'Total',
+                citiesOf: 'cities,',
+                timeDiffAhead: 'ahead',
+                timeDiffBehind: 'behind',
+                sameTime: 'Same time',
+                hour: 'h',
+                minute: 'min'
+            },
+            fr: {
+                title: '🌍 Heure Mondiale',
+                listView: '📋 Vue Liste',
+                mapView: '🗺️ Vue Carte',
+                searchPlaceholder: 'Rechercher ville ou pays...',
+                filterAll: 'Tout',
+                filterAsia: 'Asie',
+                filterEurope: 'Europe',
+                filterAmericas: 'Amériques',
+                filterAfrica: 'Afrique',
+                filterOceania: 'Océanie',
+                utcTime: '⏰ Heure UTC Actuelle',
+                mapTitle: '🗺️ Voir sur la Carte',
+                legendTitle: 'Couleurs par Continent',
+                asia: '🌏 Asie',
+                europe: '🇪🇺 Europe',
+                americas: '🌎 Amériques',
+                africa: '🌍 Afrique',
+                oceania: '🌏 Océanie',
+                currentLocation: 'Votre Position',
+                dstActive: 'Heure d\'été',
+                showing: 'affichées',
+                totalCities: 'Total',
+                citiesOf: 'villes,',
+                timeDiffAhead: 'en avance',
+                timeDiffBehind: 'en retard',
+                sameTime: 'Même heure',
+                hour: 'h',
+                minute: 'min'
+            },
+            es: {
+                title: '🌍 Hora Mundial',
+                listView: '📋 Vista de Lista',
+                mapView: '🗺️ Vista de Mapa',
+                searchPlaceholder: 'Buscar ciudad o país...',
+                filterAll: 'Todo',
+                filterAsia: 'Asia',
+                filterEurope: 'Europa',
+                filterAmericas: 'Américas',
+                filterAfrica: 'África',
+                filterOceania: 'Oceanía',
+                utcTime: '⏰ Hora UTC Actual',
+                mapTitle: '🗺️ Ver en el Mapa',
+                legendTitle: 'Colores por Continente',
+                asia: '🌏 Asia',
+                europe: '🇪🇺 Europa',
+                americas: '🌎 Américas',
+                africa: '🌍 África',
+                oceania: '🌏 Oceanía',
+                currentLocation: 'Su Ubicación',
+                dstActive: 'Horario de Verano',
+                showing: 'mostrando',
+                totalCities: 'Total',
+                citiesOf: 'ciudades,',
+                timeDiffAhead: 'adelantado',
+                timeDiffBehind: 'atrasado',
+                sameTime: 'Misma hora',
+                hour: 'h',
+                minute: 'min'
+            },
+            ru: {
+                title: '🌍 Мировое Время',
+                listView: '📋 Список',
+                mapView: '🗺️ Карта',
+                searchPlaceholder: 'Поиск города или страны...',
+                filterAll: 'Все',
+                filterAsia: 'Азия',
+                filterEurope: 'Европа',
+                filterAmericas: 'Америки',
+                filterAfrica: 'Африка',
+                filterOceania: 'Океания',
+                utcTime: '⏰ Текущее время UTC',
+                mapTitle: '🗺️ Просмотр на карте',
+                legendTitle: 'Цвета по континентам',
+                asia: '🌏 Азия',
+                europe: '🇪🇺 Европа',
+                americas: '🌎 Америки',
+                africa: '🌍 Африка',
+                oceania: '🌏 Океания',
+                currentLocation: 'Ваше местоположение',
+                dstActive: 'Летнее время',
+                showing: 'показано',
+                totalCities: 'Всего',
+                citiesOf: 'городов,',
+                timeDiffAhead: 'впереди',
+                timeDiffBehind: 'позади',
+                sameTime: 'То же время',
+                hour: 'ч',
+                minute: 'мин'
+            },
+            zh: {
+                title: '🌍 世界时钟',
+                listView: '📋 列表视图',
+                mapView: '🗺️ 地图视图',
+                searchPlaceholder: '搜索城市或国家...',
+                filterAll: '全部',
+                filterAsia: '亚洲',
+                filterEurope: '欧洲',
+                filterAmericas: '美洲',
+                filterAfrica: '非洲',
+                filterOceania: '大洋洲',
+                utcTime: '⏰ 当前UTC时间',
+                mapTitle: '🗺️ 在地图上查看',
+                legendTitle: '按大洲颜色',
+                asia: '🌏 亚洲',
+                europe: '🇪🇺 欧洲',
+                americas: '🌎 美洲',
+                africa: '🌍 非洲',
+                oceania: '🌏 大洋洲',
+                currentLocation: '您的位置',
+                dstActive: '夏令时',
+                showing: '显示',
+                totalCities: '共',
+                citiesOf: '个城市，',
+                timeDiffAhead: '快',
+                timeDiffBehind: '慢',
+                sameTime: '相同时间',
+                hour: '小时',
+                minute: '分钟'
+            },
+            ar: {
+                title: '🌍 الوقت العالمي',
+                listView: '📋 عرض القائمة',
+                mapView: '🗺️ عرض الخريطة',
+                searchPlaceholder: 'البحث عن مدينة أو بلد...',
+                filterAll: 'الكل',
+                filterAsia: 'آسيا',
+                filterEurope: 'أوروبا',
+                filterAmericas: 'الأمريكتان',
+                filterAfrica: 'أفريقيا',
+                filterOceania: 'أوقيانوسيا',
+                utcTime: '⏰ التوقيت العالمي الحالي',
+                mapTitle: '🗺️ عرض على الخريطة',
+                legendTitle: 'الألوان حسب القارة',
+                asia: '🌏 آسيا',
+                europe: '🇪🇺 أوروبا',
+                americas: '🌎 الأمريكتان',
+                africa: '🌍 أفريقيا',
+                oceania: '🌏 أوقيانوسيا',
+                currentLocation: 'موقعك',
+                dstActive: 'التوقيت الصيفي',
+                showing: 'عرض',
+                totalCities: 'مجموع',
+                citiesOf: 'مدينة،',
+                timeDiffAhead: 'متقدم',
+                timeDiffBehind: 'متأخر',
+                sameTime: 'نفس الوقت',
+                hour: 'س',
+                minute: 'د'
+            }
+        };
+
+        let currentLang = 'ko';
+        let favorites = JSON.parse(localStorage.getItem('worldClockFavorites') || '[]');
+        let showingFavorites = false;
+
+        function translateCountry(country) {
+            if (currentLang === 'ko') return country;
+            const trans = cityTranslations[currentLang];
+            if (!trans) return country;
+            
+            // 괄호 안의 내용 처리
+            const match = country.match(/^(.+?)\((.+?)\)$/);
+            if (match) {
+                const city = match[1];
+                const parentCountry = match[2];
+                return `${trans[city] || city} (${trans[parentCountry] || parentCountry})`;
+            }
+            
+            return trans[country] || country;
+        }
+
+        function toggleFavorites() {
+            showingFavorites = !showingFavorites;
+            const icon = document.getElementById('favoritesIcon');
+            const toggle = document.querySelector('.favorites-toggle');
+            
+            if (showingFavorites) {
+                toggle.classList.add('active');
+                icon.textContent = '⭐';
+            } else {
+                toggle.classList.remove('active');
+                icon.textContent = '⭐';
+            }
+            
+            updateClocks();
+        }
+
+        function toggleFavorite(cityKey, event) {
+            event.stopPropagation();
+            const index = favorites.indexOf(cityKey);
+            if (index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(cityKey);
+            }
+            localStorage.setItem('worldClockFavorites', JSON.stringify(favorites));
+            updateClocks();
+        }
+
+        function isFavorite(cityKey) {
+            return favorites.includes(cityKey);
+        }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.closest('.lang-btn').classList.add('active');
+            
+            const t = translations[lang];
+            document.getElementById('mainTitle').textContent = t.title;
+            document.getElementById('listViewBtn').textContent = t.listView;
+            document.getElementById('mapViewBtn').textContent = t.mapView;
+            document.getElementById('searchBox').placeholder = t.searchPlaceholder;
+            document.getElementById('filterAll').textContent = t.filterAll;
+            document.getElementById('filterAsia').textContent = t.filterAsia;
+            document.getElementById('filterEurope').textContent = t.filterEurope;
+            document.getElementById('filterAmericas').textContent = t.filterAmericas;
+            document.getElementById('filterAfrica').textContent = t.filterAfrica;
+            document.getElementById('filterOceania').textContent = t.filterOceania;
+            
+            const utcRefTitle = document.querySelector('.utc-reference h2');
+            if (utcRefTitle) utcRefTitle.textContent = t.utcTime;
+            
+            const mapTitle = document.querySelector('#mapView h2');
+            if (mapTitle) mapTitle.textContent = t.mapTitle;
+            
+            const legendTitle = document.querySelector('.legend-title');
+            if (legendTitle) legendTitle.textContent = t.legendTitle;
+            
+            updateClocks();
+        }
+
         const cities = {
             asia: [
                 // 동아시아
@@ -669,6 +1129,10 @@
                 { name: '런던', country: '영국', timezone: 'Europe/London', lat: 51.5074, lng: -0.1278 },
                 { name: '맨체스터', country: '영국', timezone: 'Europe/London', lat: 53.4808, lng: -2.2426 },
                 { name: '에든버러', country: '영국', timezone: 'Europe/London', lat: 55.9533, lng: -3.1883 },
+                { name: '지브롤터', country: '지브롤터(영국)', timezone: 'Europe/Gibraltar', lat: 36.1408, lng: -5.3536 },
+                { name: '더글러스', country: '맨섬(영국)', timezone: 'Europe/Isle_of_Man', lat: 54.1509, lng: -4.4821 },
+                { name: '세인트헬리어', country: '저지섬(영국)', timezone: 'Europe/Jersey', lat: 49.1858, lng: -2.1101 },
+                { name: '세인트피터포트', country: '건지섬(영국)', timezone: 'Europe/Guernsey', lat: 49.4538, lng: -2.5354 },
                 { name: '더블린', country: '아일랜드', timezone: 'Europe/Dublin', lat: 53.3498, lng: -6.2603 },
                 { name: '파리', country: '프랑스', timezone: 'Europe/Paris', lat: 48.8566, lng: 2.3522 },
                 { name: '마르세유', country: '프랑스', timezone: 'Europe/Paris', lat: 43.2965, lng: 5.3698 },
@@ -701,12 +1165,16 @@
                 { name: '밀라노', country: '이탈리아', timezone: 'Europe/Rome', lat: 45.4642, lng: 9.1900 },
                 { name: '베네치아', country: '이탈리아', timezone: 'Europe/Rome', lat: 45.4408, lng: 12.3155 },
                 { name: '피렌체', country: '이탈리아', timezone: 'Europe/Rome', lat: 43.7696, lng: 11.2558 },
-                { name: '마드리드', country: '스페인', timezone: 'Europe/Madrid', lat: 40.4168, lng: -3.7038 },
-                { name: '바르셀로나', country: '스페인', timezone: 'Europe/Madrid', lat: 41.3851, lng: 2.1734 },
-                { name: '세비야', country: '스페인', timezone: 'Europe/Madrid', lat: 37.3891, lng: -5.9845 },
-                { name: '발렌시아', country: '스페인', timezone: 'Europe/Madrid', lat: 39.4699, lng: -0.3763 },
+                { name: '마드리드', country: '에스파냐', timezone: 'Europe/Madrid', lat: 40.4168, lng: -3.7038 },
+                { name: '바르셀로나', country: '에스파냐', timezone: 'Europe/Madrid', lat: 41.3851, lng: 2.1734 },
+                { name: '세비야', country: '에스파냐', timezone: 'Europe/Madrid', lat: 37.3891, lng: -5.9845 },
+                { name: '발렌시아', country: '에스파냐', timezone: 'Europe/Madrid', lat: 39.4699, lng: -0.3763 },
+                { name: '세우타', country: '세우타(에스파냐)', timezone: 'Africa/Ceuta', lat: 35.8894, lng: -5.3213 },
+                { name: '멜리야', country: '멜리야(에스파냐)', timezone: 'Africa/Ceuta', lat: 35.2923, lng: -2.9381 },
                 { name: '리스본', country: '포르투갈', timezone: 'Europe/Lisbon', lat: 38.7223, lng: -9.1393 },
                 { name: '포르투', country: '포르투갈', timezone: 'Europe/Lisbon', lat: 41.1579, lng: -8.6291 },
+                { name: '폰타델가다', country: '아조레스(포르투갈)', timezone: 'Atlantic/Azores', lat: 37.7412, lng: -25.6756 },
+                { name: '푼샬', country: '마데이라(포르투갈)', timezone: 'Atlantic/Madeira', lat: 32.6669, lng: -16.9241 },
                 { name: '아테네', country: '그리스', timezone: 'Europe/Athens', lat: 37.9838, lng: 23.7275 },
                 { name: '발레타', country: '몰타', timezone: 'Europe/Malta', lat: 35.8989, lng: 14.5146 },
                 { name: '산마리노', country: '산마리노', timezone: 'Europe/San_Marino', lat: 43.9424, lng: 12.4578 },
@@ -732,8 +1200,12 @@
                 // 북유럽
                 { name: '스톡홀름', country: '스웨덴', timezone: 'Europe/Stockholm', lat: 59.3293, lng: 18.0686 },
                 { name: '오슬로', country: '노르웨이', timezone: 'Europe/Oslo', lat: 59.9139, lng: 10.7522 },
+                { name: '롱이어뷔엔', country: '스발바르(노르웨이)', timezone: 'Arctic/Longyearbyen', lat: 78.2232, lng: 15.6267 },
                 { name: '코펜하겐', country: '덴마크', timezone: 'Europe/Copenhagen', lat: 55.6761, lng: 12.5683 },
+                { name: '누크', country: '그린란드(덴마크)', timezone: 'America/Godthab', lat: 64.1814, lng: -51.6941 },
+                { name: '토르스하운', country: '페로 제도(덴마크)', timezone: 'Atlantic/Faroe', lat: 62.0079, lng: -6.7900 },
                 { name: '헬싱키', country: '핀란드', timezone: 'Europe/Helsinki', lat: 60.1699, lng: 24.9384 },
+                { name: '마리에함', country: '올란드(핀란드)', timezone: 'Europe/Mariehamn', lat: 60.0973, lng: 19.9345 },
                 { name: '레이캬비크', country: '아이슬란드', timezone: 'Atlantic/Reykjavik', lat: 64.1466, lng: -21.9426 },
                 { name: '탈린', country: '에스토니아', timezone: 'Europe/Tallinn', lat: 59.4370, lng: 24.7536 },
                 { name: '리가', country: '라트비아', timezone: 'Europe/Riga', lat: 56.9496, lng: 24.1052 },
@@ -942,6 +1414,41 @@
             document.getElementById('darkModeIcon').textContent = isDarkMode ? '☀️' : '🌙';
         }
 
+        function getTimeDifference(timezone1, timezone2) {
+            const now = new Date();
+            const offset1 = getUTCOffsetMinutes(timezone1, now);
+            const offset2 = getUTCOffsetMinutes(timezone2, now);
+            return (offset2 - offset1) / 60; // 시간 단위로 변환
+        }
+
+        function formatTimeDifference(hoursDiff) {
+            const t = translations[currentLang];
+            if (hoursDiff === 0) return t.sameTime;
+            
+            const absHours = Math.abs(hoursDiff);
+            const hours = Math.floor(absHours);
+            const minutes = Math.round((absHours - hours) * 60);
+            
+            let result = '';
+            if (hours > 0) {
+                result += `${hours}${t.hour}`;
+            }
+            if (minutes > 0) {
+                if (hours > 0) result += ' ';
+                result += `${minutes}${t.minute}`;
+            }
+            
+            result += ' ';
+            
+            if (hoursDiff > 0) {
+                result += t.timeDiffAhead;
+            } else {
+                result += t.timeDiffBehind;
+            }
+            
+            return result;
+        }
+
         function copyTimeInfo(cityName, time, date, utcOffset) {
             const text = `${cityName}\n${time}\n${date}\n${utcOffset}`;
             navigator.clipboard.writeText(text).then(() => {
@@ -1122,6 +1629,7 @@
         function updateClocks() {
             const container = document.getElementById('listView');
             const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const t = translations[currentLang];
             let totalCities = 0;
             let visibleCities = 0;
 
@@ -1132,11 +1640,11 @@
                     section.id = region;
                     
                     const regionNames = {
-                        asia: '🌏 아시아',
-                        europe: '🇪🇺 유럽',
-                        americas: '🌎 아메리카',
-                        africa: '🌍 아프리카',
-                        oceania: '🌏 오세아니아'
+                        asia: t.asia,
+                        europe: t.europe,
+                        americas: t.americas,
+                        africa: t.africa,
+                        oceania: t.oceania
                     };
                     
                     section.innerHTML = `<h2 class="region-title">${regionNames[region]}</h2><div class="clock-grid" id="grid-${region}"></div>`;
@@ -1154,6 +1662,11 @@
                     totalCities++;
                     const now = new Date();
                     const isCurrentLocation = city.timezone === userTimezone;
+                    const cityKey = `${city.name}_${city.timezone}`;
+                    const isFav = isFavorite(cityKey);
+                    
+                    // 즐겨찾기 모드일 때 즐겨찾기가 아니면 스킵
+                    if (showingFavorites && !isFav) return;
                     
                     const matches = searchTerm === '' || 
                                   city.name.toLowerCase().includes(searchTerm) ||
@@ -1162,7 +1675,7 @@
                     if (!matches) return;
                     visibleCities++;
                     
-                    const timeString = now.toLocaleTimeString('ko-KR', {
+                    const timeString = now.toLocaleTimeString(currentLang === 'ar' ? 'ar' : 'ko-KR', {
                         timeZone: city.timezone,
                         hour: '2-digit',
                         minute: '2-digit',
@@ -1170,7 +1683,7 @@
                         hour12: false
                     });
 
-                    const dateString = now.toLocaleDateString('ko-KR', {
+                    const dateString = now.toLocaleDateString(currentLang === 'ar' ? 'ar' : 'ko-KR', {
                         timeZone: city.timezone,
                         year: 'numeric',
                         month: 'long',
@@ -1180,6 +1693,13 @@
 
                     const utcOffset = getUTCOffset(city.timezone, now);
                     const hasDST = isDST(city.timezone, now);
+                    
+                    // 시차 계산
+                    const timeDiff = getTimeDifference(userTimezone, city.timezone);
+                    const timeDiffText = formatTimeDifference(timeDiff);
+                    
+                    // 국가명 번역
+                    const translatedCountry = translateCountry(city.country);
 
                     const card = document.createElement('div');
                     card.className = `clock-card ${isCurrentLocation ? 'current-location' : ''}`;
@@ -1188,15 +1708,17 @@
                         <button class="copy-btn" onclick="copyTimeInfo('${city.name}', '${timeString}', '${dateString}', '${utcOffset}')" title="복사">📋</button>
                         <div class="city-name">
                             ${city.name}
-                            ${isCurrentLocation ? '<span class="current-badge">현재 위치</span>' : ''}
+                            <span class="favorite-star" onclick="toggleFavorite('${cityKey}', event)">${isFav ? '⭐' : '☆'}</span>
+                            ${isCurrentLocation ? `<span class="current-badge">${t.currentLocation}</span>` : ''}
                         </div>
-                        <div class="country-name">${city.country}</div>
+                        <div class="country-name">${translatedCountry}</div>
                         <div class="time-display">${timeString}</div>
+                        ${!isCurrentLocation ? `<div class="time-diff">${timeDiffText}</div>` : ''}
                         <div class="date-display">${dateString}</div>
                         <div class="utc-info">
                             <div class="utc-offset">
                                 ${utcOffset}
-                                ${hasDST ? '<span class="dst-badge">서머타임 적용 중</span>' : ''}
+                                ${hasDST ? `<span class="dst-badge">${t.dstActive}</span>` : ''}
                             </div>
                         </div>
                         <div class="timezone-display">${city.timezone}</div>
@@ -1206,7 +1728,7 @@
             }
 
             document.getElementById('stats').textContent = 
-                `총 ${totalCities}개 도시 중 ${visibleCities}개 표시`;
+                `${t.totalCities} ${totalCities}${t.citiesOf} ${visibleCities}${t.showing}`;
         }
 
         function filterRegion(region) {
@@ -1250,4 +1772,4 @@
         }, 1000);
     </script>
 </body>
-    </html>
+                </html>
