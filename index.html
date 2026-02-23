@@ -1,9 +1,11 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>세계 시간 - UTC 기준</title>
+    <title>세계 시간 - UTC 기준 + 지도 보기</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * {
             margin: 0;
@@ -124,6 +126,63 @@
 
         .toggle-switch.active .toggle-slider {
             transform: translateX(30px);
+        }
+
+        .view-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .view-tab {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.7);
+            color: #667eea;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .view-tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        }
+
+        .view-tab.active {
+            background: white;
+            color: #764ba2;
+        }
+
+        #mapView {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        #mapView.active {
+            display: block;
+        }
+
+        #map {
+            height: 600px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        #listView.active {
+            display: block;
+        }
+
+        #listView {
+            display: none;
         }
 
         .region-section {
@@ -261,14 +320,88 @@
             font-size: 1.1rem;
             color: #555;
         }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 10px;
+        }
+
+        .popup-content {
+            min-width: 200px;
+        }
+
+        .popup-city {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .popup-country {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .popup-time {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #764ba2;
+            margin-bottom: 5px;
+        }
+
+        .popup-date {
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .popup-utc {
+            font-size: 0.9rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .map-legend {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🌍 세계 시간 (UTC 기준)</h1>
+            <h1>🌍 세계 시간</h1>
             <div class="subtitle">전 세계 150개 이상의 주요 도시 시간 - UTC 오프셋 및 서머타임 표시</div>
         </header>
+
+        <div class="view-tabs">
+            <button class="view-tab active" onclick="switchView('list')">📋 목록 보기</button>
+            <button class="view-tab" onclick="switchView('map')">🗺️ 지도 보기</button>
+        </div>
 
         <div class="controls">
             <input type="text" class="search-box" id="searchBox" placeholder="도시 또는 국가 검색...">
@@ -294,193 +427,236 @@
             <div class="utc-date" id="currentUtcDate">----</div>
         </div>
 
-        <div id="clockContainer"></div>
+        <div id="mapView">
+            <h2 style="color: #667eea; margin-bottom: 10px;">🗺️ 세계 지도에서 보기</h2>
+            <div id="map"></div>
+            <div class="map-legend">
+                <div class="legend-title">시간대별 색상</div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span>UTC-12 ~ UTC-6 (서부 아메리카)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f39c12;"></div>
+                    <span>UTC-5 ~ UTC-1 (동부 아메리카)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #2ecc71;"></div>
+                    <span>UTC+0 ~ UTC+3 (유럽/아프리카)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3498db;"></div>
+                    <span>UTC+4 ~ UTC+7 (중동/인도)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #9b59b6;"></div>
+                    <span>UTC+8 ~ UTC+12 (동아시아/오세아니아)</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="listView" class="active"></div>
     </div>
 
     <script>
         const cities = {
             asia: [
-                { name: '서울', country: '대한민국', timezone: 'Asia/Seoul' },
-                { name: '부산', country: '대한민국', timezone: 'Asia/Seoul' },
-                { name: '평양', country: '북한', timezone: 'Asia/Pyongyang' },
-                { name: '도쿄', country: '일본', timezone: 'Asia/Tokyo' },
-                { name: '오사카', country: '일본', timezone: 'Asia/Tokyo' },
-                { name: '베이징', country: '중국', timezone: 'Asia/Shanghai' },
-                { name: '상하이', country: '중국', timezone: 'Asia/Shanghai' },
-                { name: '홍콩', country: '중국', timezone: 'Asia/Hong_Kong' },
-                { name: '타이베이', country: '대만', timezone: 'Asia/Taipei' },
-                { name: '마카오', country: '중국', timezone: 'Asia/Macau' },
-                { name: '싱가포르', country: '싱가포르', timezone: 'Asia/Singapore' },
-                { name: '방콕', country: '태국', timezone: 'Asia/Bangkok' },
-                { name: '하노이', country: '베트남', timezone: 'Asia/Ho_Chi_Minh' },
-                { name: '호치민', country: '베트남', timezone: 'Asia/Ho_Chi_Minh' },
-                { name: '마닐라', country: '필리핀', timezone: 'Asia/Manila' },
-                { name: '자카르타', country: '인도네시아', timezone: 'Asia/Jakarta' },
-                { name: '발리', country: '인도네시아', timezone: 'Asia/Makassar' },
-                { name: '쿠알라룸푸르', country: '말레이시아', timezone: 'Asia/Kuala_Lumpur' },
-                { name: '양곤', country: '미얀마', timezone: 'Asia/Yangon' },
-                { name: '프놈펜', country: '캄보디아', timezone: 'Asia/Phnom_Penh' },
-                { name: '비엔티안', country: '라오스', timezone: 'Asia/Vientiane' },
-                { name: '뉴델리', country: '인도', timezone: 'Asia/Kolkata' },
-                { name: '뭄바이', country: '인도', timezone: 'Asia/Kolkata' },
-                { name: '방갈로르', country: '인도', timezone: 'Asia/Kolkata' },
-                { name: '다카', country: '방글라데시', timezone: 'Asia/Dhaka' },
-                { name: '카트만두', country: '네팔', timezone: 'Asia/Kathmandu' },
-                { name: '이슬라마바드', country: '파키스탄', timezone: 'Asia/Karachi' },
-                { name: '카라치', country: '파키스탄', timezone: 'Asia/Karachi' },
-                { name: '카불', country: '아프가니스탄', timezone: 'Asia/Kabul' },
-                { name: '테헤란', country: '이란', timezone: 'Asia/Tehran' },
-                { name: '바그다드', country: '이라크', timezone: 'Asia/Baghdad' },
-                { name: '다마스쿠스', country: '시리아', timezone: 'Asia/Damascus' },
-                { name: '베이루트', country: '레바논', timezone: 'Asia/Beirut' },
-                { name: '암만', country: '요르단', timezone: 'Asia/Amman' },
-                { name: '예루살렘', country: '이스라엘', timezone: 'Asia/Jerusalem' },
-                { name: '텔아비브', country: '이스라엘', timezone: 'Asia/Jerusalem' },
-                { name: '두바이', country: 'UAE', timezone: 'Asia/Dubai' },
-                { name: '아부다비', country: 'UAE', timezone: 'Asia/Dubai' },
-                { name: '도하', country: '카타르', timezone: 'Asia/Qatar' },
-                { name: '쿠웨이트', country: '쿠웨이트', timezone: 'Asia/Kuwait' },
-                { name: '리야드', country: '사우디', timezone: 'Asia/Riyadh' },
-                { name: '제다', country: '사우디', timezone: 'Asia/Riyadh' },
-                { name: '무스카트', country: '오만', timezone: 'Asia/Muscat' },
-                { name: '예레반', country: '아르메니아', timezone: 'Asia/Yerevan' },
-                { name: '트빌리시', country: '조지아', timezone: 'Asia/Tbilisi' },
-                { name: '바쿠', country: '아제르바이잔', timezone: 'Asia/Baku' },
-                { name: '타슈켄트', country: '우즈베키스탄', timezone: 'Asia/Tashkent' },
-                { name: '알마티', country: '카자흐스탄', timezone: 'Asia/Almaty' },
-                { name: '울란바토르', country: '몽골', timezone: 'Asia/Ulaanbaatar' },
+                { name: '서울', country: '대한민국', timezone: 'Asia/Seoul', lat: 37.5665, lng: 126.9780 },
+                { name: '부산', country: '대한민국', timezone: 'Asia/Seoul', lat: 35.1796, lng: 129.0756 },
+                { name: '평양', country: '북한', timezone: 'Asia/Pyongyang', lat: 39.0392, lng: 125.7625 },
+                { name: '도쿄', country: '일본', timezone: 'Asia/Tokyo', lat: 35.6762, lng: 139.6503 },
+                { name: '오사카', country: '일본', timezone: 'Asia/Tokyo', lat: 34.6937, lng: 135.5023 },
+                { name: '베이징', country: '중국', timezone: 'Asia/Shanghai', lat: 39.9042, lng: 116.4074 },
+                { name: '상하이', country: '중국', timezone: 'Asia/Shanghai', lat: 31.2304, lng: 121.4737 },
+                { name: '홍콩', country: '중국', timezone: 'Asia/Hong_Kong', lat: 22.3193, lng: 114.1694 },
+                { name: '타이베이', country: '대만', timezone: 'Asia/Taipei', lat: 25.0330, lng: 121.5654 },
+                { name: '마카오', country: '중국', timezone: 'Asia/Macau', lat: 22.1987, lng: 113.5439 },
+                { name: '싱가포르', country: '싱가포르', timezone: 'Asia/Singapore', lat: 1.3521, lng: 103.8198 },
+                { name: '방콕', country: '태국', timezone: 'Asia/Bangkok', lat: 13.7563, lng: 100.5018 },
+                { name: '하노이', country: '베트남', timezone: 'Asia/Ho_Chi_Minh', lat: 21.0285, lng: 105.8542 },
+                { name: '호치민', country: '베트남', timezone: 'Asia/Ho_Chi_Minh', lat: 10.8231, lng: 106.6297 },
+                { name: '마닐라', country: '필리핀', timezone: 'Asia/Manila', lat: 14.5995, lng: 120.9842 },
+                { name: '자카르타', country: '인도네시아', timezone: 'Asia/Jakarta', lat: -6.2088, lng: 106.8456 },
+                { name: '발리', country: '인도네시아', timezone: 'Asia/Makassar', lat: -8.3405, lng: 115.0920 },
+                { name: '쿠알라룸푸르', country: '말레이시아', timezone: 'Asia/Kuala_Lumpur', lat: 3.1390, lng: 101.6869 },
+                { name: '양곤', country: '미얀마', timezone: 'Asia/Yangon', lat: 16.8661, lng: 96.1951 },
+                { name: '프놈펜', country: '캄보디아', timezone: 'Asia/Phnom_Penh', lat: 11.5564, lng: 104.9282 },
+                { name: '비엔티안', country: '라오스', timezone: 'Asia/Vientiane', lat: 17.9757, lng: 102.6331 },
+                { name: '뉴델리', country: '인도', timezone: 'Asia/Kolkata', lat: 28.6139, lng: 77.2090 },
+                { name: '뭄바이', country: '인도', timezone: 'Asia/Kolkata', lat: 19.0760, lng: 72.8777 },
+                { name: '방갈로르', country: '인도', timezone: 'Asia/Kolkata', lat: 12.9716, lng: 77.5946 },
+                { name: '다카', country: '방글라데시', timezone: 'Asia/Dhaka', lat: 23.8103, lng: 90.4125 },
+                { name: '카트만두', country: '네팔', timezone: 'Asia/Kathmandu', lat: 27.7172, lng: 85.3240 },
+                { name: '이슬라마바드', country: '파키스탄', timezone: 'Asia/Karachi', lat: 33.6844, lng: 73.0479 },
+                { name: '카라치', country: '파키스탄', timezone: 'Asia/Karachi', lat: 24.8607, lng: 67.0011 },
+                { name: '카불', country: '아프가니스탄', timezone: 'Asia/Kabul', lat: 34.5553, lng: 69.2075 },
+                { name: '테헤란', country: '이란', timezone: 'Asia/Tehran', lat: 35.6892, lng: 51.3890 },
+                { name: '바그다드', country: '이라크', timezone: 'Asia/Baghdad', lat: 33.3152, lng: 44.3661 },
+                { name: '다마스쿠스', country: '시리아', timezone: 'Asia/Damascus', lat: 33.5138, lng: 36.2765 },
+                { name: '베이루트', country: '레바논', timezone: 'Asia/Beirut', lat: 33.8886, lng: 35.4955 },
+                { name: '암만', country: '요르단', timezone: 'Asia/Amman', lat: 31.9454, lng: 35.9284 },
+                { name: '예루살렘', country: '이스라엘', timezone: 'Asia/Jerusalem', lat: 31.7683, lng: 35.2137 },
+                { name: '텔아비브', country: '이스라엘', timezone: 'Asia/Jerusalem', lat: 32.0853, lng: 34.7818 },
+                { name: '두바이', country: 'UAE', timezone: 'Asia/Dubai', lat: 25.2048, lng: 55.2708 },
+                { name: '아부다비', country: 'UAE', timezone: 'Asia/Dubai', lat: 24.4539, lng: 54.3773 },
+                { name: '도하', country: '카타르', timezone: 'Asia/Qatar', lat: 25.2854, lng: 51.5310 },
+                { name: '쿠웨이트', country: '쿠웨이트', timezone: 'Asia/Kuwait', lat: 29.3759, lng: 47.9774 },
+                { name: '리야드', country: '사우디', timezone: 'Asia/Riyadh', lat: 24.7136, lng: 46.6753 },
+                { name: '제다', country: '사우디', timezone: 'Asia/Riyadh', lat: 21.5433, lng: 39.1728 },
+                { name: '무스카트', country: '오만', timezone: 'Asia/Muscat', lat: 23.5880, lng: 58.3829 },
+                { name: '예레반', country: '아르메니아', timezone: 'Asia/Yerevan', lat: 40.1792, lng: 44.4991 },
+                { name: '트빌리시', country: '조지아', timezone: 'Asia/Tbilisi', lat: 41.7151, lng: 44.8271 },
+                { name: '바쿠', country: '아제르바이잔', timezone: 'Asia/Baku', lat: 40.4093, lng: 49.8671 },
+                { name: '타슈켄트', country: '우즈베키스탄', timezone: 'Asia/Tashkent', lat: 41.2995, lng: 69.2401 },
+                { name: '알마티', country: '카자흐스탄', timezone: 'Asia/Almaty', lat: 43.2220, lng: 76.8512 },
+                { name: '울란바토르', country: '몽골', timezone: 'Asia/Ulaanbaatar', lat: 47.8864, lng: 106.9057 },
             ],
             europe: [
-                { name: '런던', country: '영국', timezone: 'Europe/London' },
-                { name: '에딘버러', country: '영국', timezone: 'Europe/London' },
-                { name: '더블린', country: '아일랜드', timezone: 'Europe/Dublin' },
-                { name: '파리', country: '프랑스', timezone: 'Europe/Paris' },
-                { name: '마르세유', country: '프랑스', timezone: 'Europe/Paris' },
-                { name: '리옹', country: '프랑스', timezone: 'Europe/Paris' },
-                { name: '베를린', country: '독일', timezone: 'Europe/Berlin' },
-                { name: '뮌헨', country: '독일', timezone: 'Europe/Berlin' },
-                { name: '함부르크', country: '독일', timezone: 'Europe/Berlin' },
-                { name: '프랑크푸르트', country: '독일', timezone: 'Europe/Berlin' },
-                { name: '로마', country: '이탈리아', timezone: 'Europe/Rome' },
-                { name: '밀라노', country: '이탈리아', timezone: 'Europe/Rome' },
-                { name: '베네치아', country: '이탈리아', timezone: 'Europe/Rome' },
-                { name: '피렌체', country: '이탈리아', timezone: 'Europe/Rome' },
-                { name: '마드리드', country: '스페인', timezone: 'Europe/Madrid' },
-                { name: '바르셀로나', country: '스페인', timezone: 'Europe/Madrid' },
-                { name: '세비야', country: '스페인', timezone: 'Europe/Madrid' },
-                { name: '리스본', country: '포르투갈', timezone: 'Europe/Lisbon' },
-                { name: '암스테르담', country: '네덜란드', timezone: 'Europe/Amsterdam' },
-                { name: '브뤼셀', country: '벨기에', timezone: 'Europe/Brussels' },
-                { name: '룩셈부르크', country: '룩셈부르크', timezone: 'Europe/Luxembourg' },
-                { name: '취리히', country: '스위스', timezone: 'Europe/Zurich' },
-                { name: '제네바', country: '스위스', timezone: 'Europe/Zurich' },
-                { name: '빈', country: '오스트리아', timezone: 'Europe/Vienna' },
-                { name: '프라하', country: '체코', timezone: 'Europe/Prague' },
-                { name: '바르샤바', country: '폴란드', timezone: 'Europe/Warsaw' },
-                { name: '부다페스트', country: '헝가리', timezone: 'Europe/Budapest' },
-                { name: '아테네', country: '그리스', timezone: 'Europe/Athens' },
-                { name: '이스탄불', country: '튀르키예', timezone: 'Europe/Istanbul' },
-                { name: '안카라', country: '튀르키예', timezone: 'Europe/Istanbul' },
-                { name: '모스크바', country: '러시아', timezone: 'Europe/Moscow' },
-                { name: '상트페테르부르크', country: '러시아', timezone: 'Europe/Moscow' },
-                { name: '키이우', country: '우크라이나', timezone: 'Europe/Kiev' },
-                { name: '스톡홀름', country: '스웨덴', timezone: 'Europe/Stockholm' },
-                { name: '오슬로', country: '노르웨이', timezone: 'Europe/Oslo' },
-                { name: '코펜하겐', country: '덴마크', timezone: 'Europe/Copenhagen' },
-                { name: '헬싱키', country: '핀란드', timezone: 'Europe/Helsinki' },
-                { name: '레이캬비크', country: '아이슬란드', timezone: 'Atlantic/Reykjavik' },
-                { name: '부쿠레슈티', country: '루마니아', timezone: 'Europe/Bucharest' },
-                { name: '소피아', country: '불가리아', timezone: 'Europe/Sofia' },
-                { name: '베오그라드', country: '세르비아', timezone: 'Europe/Belgrade' },
+                { name: '런던', country: '영국', timezone: 'Europe/London', lat: 51.5074, lng: -0.1278 },
+                { name: '에딘버러', country: '영국', timezone: 'Europe/London', lat: 55.9533, lng: -3.1883 },
+                { name: '더블린', country: '아일랜드', timezone: 'Europe/Dublin', lat: 53.3498, lng: -6.2603 },
+                { name: '파리', country: '프랑스', timezone: 'Europe/Paris', lat: 48.8566, lng: 2.3522 },
+                { name: '마르세유', country: '프랑스', timezone: 'Europe/Paris', lat: 43.2965, lng: 5.3698 },
+                { name: '리옹', country: '프랑스', timezone: 'Europe/Paris', lat: 45.7640, lng: 4.8357 },
+                { name: '베를린', country: '독일', timezone: 'Europe/Berlin', lat: 52.5200, lng: 13.4050 },
+                { name: '뮌헨', country: '독일', timezone: 'Europe/Berlin', lat: 48.1351, lng: 11.5820 },
+                { name: '함부르크', country: '독일', timezone: 'Europe/Berlin', lat: 53.5511, lng: 9.9937 },
+                { name: '프랑크푸르트', country: '독일', timezone: 'Europe/Berlin', lat: 50.1109, lng: 8.6821 },
+                { name: '로마', country: '이탈리아', timezone: 'Europe/Rome', lat: 41.9028, lng: 12.4964 },
+                { name: '밀라노', country: '이탈리아', timezone: 'Europe/Rome', lat: 45.4642, lng: 9.1900 },
+                { name: '베네치아', country: '이탈리아', timezone: 'Europe/Rome', lat: 45.4408, lng: 12.3155 },
+                { name: '피렌체', country: '이탈리아', timezone: 'Europe/Rome', lat: 43.7696, lng: 11.2558 },
+                { name: '마드리드', country: '스페인', timezone: 'Europe/Madrid', lat: 40.4168, lng: -3.7038 },
+                { name: '바르셀로나', country: '스페인', timezone: 'Europe/Madrid', lat: 41.3851, lng: 2.1734 },
+                { name: '세비야', country: '스페인', timezone: 'Europe/Madrid', lat: 37.3891, lng: -5.9845 },
+                { name: '리스본', country: '포르투갈', timezone: 'Europe/Lisbon', lat: 38.7223, lng: -9.1393 },
+                { name: '암스테르담', country: '네덜란드', timezone: 'Europe/Amsterdam', lat: 52.3676, lng: 4.9041 },
+                { name: '브뤼셀', country: '벨기에', timezone: 'Europe/Brussels', lat: 50.8503, lng: 4.3517 },
+                { name: '룩셈부르크', country: '룩셈부르크', timezone: 'Europe/Luxembourg', lat: 49.6116, lng: 6.1319 },
+                { name: '취리히', country: '스위스', timezone: 'Europe/Zurich', lat: 47.3769, lng: 8.5417 },
+                { name: '제네바', country: '스위스', timezone: 'Europe/Zurich', lat: 46.2044, lng: 6.1432 },
+                { name: '빈', country: '오스트리아', timezone: 'Europe/Vienna', lat: 48.2082, lng: 16.3738 },
+                { name: '프라하', country: '체코', timezone: 'Europe/Prague', lat: 50.0755, lng: 14.4378 },
+                { name: '바르샤바', country: '폴란드', timezone: 'Europe/Warsaw', lat: 52.2297, lng: 21.0122 },
+                { name: '부다페스트', country: '헝가리', timezone: 'Europe/Budapest', lat: 47.4979, lng: 19.0402 },
+                { name: '아테네', country: '그리스', timezone: 'Europe/Athens', lat: 37.9838, lng: 23.7275 },
+                { name: '이스탄불', country: '튀르키예', timezone: 'Europe/Istanbul', lat: 41.0082, lng: 28.9784 },
+                { name: '안카라', country: '튀르키예', timezone: 'Europe/Istanbul', lat: 39.9334, lng: 32.8597 },
+                { name: '모스크바', country: '러시아', timezone: 'Europe/Moscow', lat: 55.7558, lng: 37.6173 },
+                { name: '상트페테르부르크', country: '러시아', timezone: 'Europe/Moscow', lat: 59.9311, lng: 30.3609 },
+                { name: '키이우', country: '우크라이나', timezone: 'Europe/Kiev', lat: 50.4501, lng: 30.5234 },
+                { name: '스톡홀름', country: '스웨덴', timezone: 'Europe/Stockholm', lat: 59.3293, lng: 18.0686 },
+                { name: '오슬로', country: '노르웨이', timezone: 'Europe/Oslo', lat: 59.9139, lng: 10.7522 },
+                { name: '코펜하겐', country: '덴마크', timezone: 'Europe/Copenhagen', lat: 55.6761, lng: 12.5683 },
+                { name: '헬싱키', country: '핀란드', timezone: 'Europe/Helsinki', lat: 60.1699, lng: 24.9384 },
+                { name: '레이캬비크', country: '아이슬란드', timezone: 'Atlantic/Reykjavik', lat: 64.1466, lng: -21.9426 },
+                { name: '부쿠레슈티', country: '루마니아', timezone: 'Europe/Bucharest', lat: 46.7712, lng: 23.6236 },
+                { name: '소피아', country: '불가리아', timezone: 'Europe/Sofia', lat: 42.6977, lng: 23.3219 },
+                { name: '베오그라드', country: '세르비아', timezone: 'Europe/Belgrade', lat: 44.7866, lng: 20.4489 },
             ],
             americas: [
-                { name: '뉴욕', country: '미국', timezone: 'America/New_York' },
-                { name: '워싱턴DC', country: '미국', timezone: 'America/New_York' },
-                { name: '보스턴', country: '미국', timezone: 'America/New_York' },
-                { name: '마이애미', country: '미국', timezone: 'America/New_York' },
-                { name: '시카고', country: '미국', timezone: 'America/Chicago' },
-                { name: '휴스턴', country: '미국', timezone: 'America/Chicago' },
-                { name: '댈러스', country: '미국', timezone: 'America/Chicago' },
-                { name: '덴버', country: '미국', timezone: 'America/Denver' },
-                { name: '피닉스', country: '미국', timezone: 'America/Phoenix' },
-                { name: '로스앤젤레스', country: '미국', timezone: 'America/Los_Angeles' },
-                { name: '샌프란시스코', country: '미국', timezone: 'America/Los_Angeles' },
-                { name: '시애틀', country: '미국', timezone: 'America/Los_Angeles' },
-                { name: '라스베이거스', country: '미국', timezone: 'America/Los_Angeles' },
-                { name: '샌디에이고', country: '미국', timezone: 'America/Los_Angeles' },
-                { name: '포틀랜드', country: '미국', timezone: 'America/Los_Angeles' },
-                { name: '앵커리지', country: '미국', timezone: 'America/Anchorage' },
-                { name: '호놀룰루', country: '미국', timezone: 'Pacific/Honolulu' },
-                { name: '토론토', country: '캐나다', timezone: 'America/Toronto' },
-                { name: '몬트리올', country: '캐나다', timezone: 'America/Toronto' },
-                { name: '밴쿠버', country: '캐나다', timezone: 'America/Vancouver' },
-                { name: '캘거리', country: '캐나다', timezone: 'America/Edmonton' },
-                { name: '멕시코시티', country: '멕시코', timezone: 'America/Mexico_City' },
-                { name: '과달라하라', country: '멕시코', timezone: 'America/Mexico_City' },
-                { name: '칸쿤', country: '멕시코', timezone: 'America/Cancun' },
-                { name: '아바나', country: '쿠바', timezone: 'America/Havana' },
-                { name: '킹스턴', country: '자메이카', timezone: 'America/Jamaica' },
-                { name: '산후안', country: '푸에르토리코', timezone: 'America/Puerto_Rico' },
-                { name: '파나마시티', country: '파나마', timezone: 'America/Panama' },
-                { name: '산호세', country: '코스타리카', timezone: 'America/Costa_Rica' },
-                { name: '과테말라시티', country: '과테말라', timezone: 'America/Guatemala' },
-                { name: '보고타', country: '콜롬비아', timezone: 'America/Bogota' },
-                { name: '카라카스', country: '베네수엘라', timezone: 'America/Caracas' },
-                { name: '리마', country: '페루', timezone: 'America/Lima' },
-                { name: '키토', country: '에콰도르', timezone: 'America/Guayaquil' },
-                { name: '라파스', country: '볼리비아', timezone: 'America/La_Paz' },
-                { name: '산티아고', country: '칠레', timezone: 'America/Santiago' },
-                { name: '부에노스아이레스', country: '아르헨티나', timezone: 'America/Argentina/Buenos_Aires' },
-                { name: '몬테비데오', country: '우루과이', timezone: 'America/Montevideo' },
-                { name: '아순시온', country: '파라과이', timezone: 'America/Asuncion' },
-                { name: '상파울루', country: '브라질', timezone: 'America/Sao_Paulo' },
-                { name: '리우데자네이루', country: '브라질', timezone: 'America/Sao_Paulo' },
-                { name: '브라질리아', country: '브라질', timezone: 'America/Sao_Paulo' },
+                { name: '뉴욕', country: '미국', timezone: 'America/New_York', lat: 40.7128, lng: -74.0060 },
+                { name: '워싱턴DC', country: '미국', timezone: 'America/New_York', lat: 38.9072, lng: -77.0369 },
+                { name: '보스턴', country: '미국', timezone: 'America/New_York', lat: 42.3601, lng: -71.0589 },
+                { name: '마이애미', country: '미국', timezone: 'America/New_York', lat: 25.7617, lng: -80.1918 },
+                { name: '시카고', country: '미국', timezone: 'America/Chicago', lat: 41.8781, lng: -87.6298 },
+                { name: '휴스턴', country: '미국', timezone: 'America/Chicago', lat: 29.7604, lng: -95.3698 },
+                { name: '댈러스', country: '미국', timezone: 'America/Chicago', lat: 32.7767, lng: -96.7970 },
+                { name: '덴버', country: '미국', timezone: 'America/Denver', lat: 39.7392, lng: -104.9903 },
+                { name: '피닉스', country: '미국', timezone: 'America/Phoenix', lat: 33.4484, lng: -112.0740 },
+                { name: '로스앤젤레스', country: '미국', timezone: 'America/Los_Angeles', lat: 34.0522, lng: -118.2437 },
+                { name: '샌프란시스코', country: '미국', timezone: 'America/Los_Angeles', lat: 37.7749, lng: -122.4194 },
+                { name: '시애틀', country: '미국', timezone: 'America/Los_Angeles', lat: 47.6062, lng: -122.3321 },
+                { name: '라스베이거스', country: '미국', timezone: 'America/Los_Angeles', lat: 36.1699, lng: -115.1398 },
+                { name: '샌디에이고', country: '미국', timezone: 'America/Los_Angeles', lat: 32.7157, lng: -117.1611 },
+                { name: '포틀랜드', country: '미국', timezone: 'America/Los_Angeles', lat: 45.5152, lng: -122.6784 },
+                { name: '앵커리지', country: '미국', timezone: 'America/Anchorage', lat: 61.2181, lng: -149.9003 },
+                { name: '호놀룰루', country: '미국', timezone: 'Pacific/Honolulu', lat: 21.3099, lng: -157.8581 },
+                { name: '토론토', country: '캐나다', timezone: 'America/Toronto', lat: 43.6532, lng: -79.3832 },
+                { name: '몬트리올', country: '캐나다', timezone: 'America/Toronto', lat: 45.5017, lng: -73.5673 },
+                { name: '밴쿠버', country: '캐나다', timezone: 'America/Vancouver', lat: 49.2827, lng: -123.1207 },
+                { name: '캘거리', country: '캐나다', timezone: 'America/Edmonton', lat: 51.0447, lng: -114.0719 },
+                { name: '멕시코시티', country: '멕시코', timezone: 'America/Mexico_City', lat: 19.4326, lng: -99.1332 },
+                { name: '과달라하라', country: '멕시코', timezone: 'America/Mexico_City', lat: 20.6597, lng: -103.3496 },
+                { name: '칸쿤', country: '멕시코', timezone: 'America/Cancun', lat: 21.1619, lng: -86.8515 },
+                { name: '아바나', country: '쿠바', timezone: 'America/Havana', lat: 23.1136, lng: -82.3666 },
+                { name: '킹스턴', country: '자메이카', timezone: 'America/Jamaica', lat: 17.9714, lng: -76.7931 },
+                { name: '산후안', country: '푸에르토리코', timezone: 'America/Puerto_Rico', lat: 18.4655, lng: -66.1057 },
+                { name: '파나마시티', country: '파나마', timezone: 'America/Panama', lat: 8.9824, lng: -79.5199 },
+                { name: '산호세', country: '코스타리카', timezone: 'America/Costa_Rica', lat: 9.9281, lng: -84.0907 },
+                { name: '과테말라시티', country: '과테말라', timezone: 'America/Guatemala', lat: 14.6349, lng: -90.5069 },
+                { name: '보고타', country: '콜롬비아', timezone: 'America/Bogota', lat: 4.7110, lng: -74.0721 },
+                { name: '카라카스', country: '베네수엘라', timezone: 'America/Caracas', lat: 10.4806, lng: -66.9036 },
+                { name: '리마', country: '페루', timezone: 'America/Lima', lat: -12.0464, lng: -77.0428 },
+                { name: '키토', country: '에콰도르', timezone: 'America/Guayaquil', lat: -0.1807, lng: -78.4678 },
+                { name: '라파스', country: '볼리비아', timezone: 'America/La_Paz', lat: -16.5000, lng: -68.1500 },
+                { name: '산티아고', country: '칠레', timezone: 'America/Santiago', lat: -33.4489, lng: -70.6693 },
+                { name: '부에노스아이레스', country: '아르헨티나', timezone: 'America/Argentina/Buenos_Aires', lat: -34.6037, lng: -58.3816 },
+                { name: '몬테비데오', country: '우루과이', timezone: 'America/Montevideo', lat: -34.9011, lng: -56.1645 },
+                { name: '아순시온', country: '파라과이', timezone: 'America/Asuncion', lat: -25.2637, lng: -57.5759 },
+                { name: '상파울루', country: '브라질', timezone: 'America/Sao_Paulo', lat: -23.5505, lng: -46.6333 },
+                { name: '리우데자네이루', country: '브라질', timezone: 'America/Sao_Paulo', lat: -22.9068, lng: -43.1729 },
+                { name: '브라질리아', country: '브라질', timezone: 'America/Sao_Paulo', lat: -15.8267, lng: -47.9218 },
             ],
             africa: [
-                { name: '카이로', country: '이집트', timezone: 'Africa/Cairo' },
-                { name: '알렉산드리아', country: '이집트', timezone: 'Africa/Cairo' },
-                { name: '카사블랑카', country: '모로코', timezone: 'Africa/Casablanca' },
-                { name: '마라케시', country: '모로코', timezone: 'Africa/Casablanca' },
-                { name: '알제', country: '알제리', timezone: 'Africa/Algiers' },
-                { name: '튀니스', country: '튀니지', timezone: 'Africa/Tunis' },
-                { name: '트리폴리', country: '리비아', timezone: 'Africa/Tripoli' },
-                { name: '라고스', country: '나이지리아', timezone: 'Africa/Lagos' },
-                { name: '아부자', country: '나이지리아', timezone: 'Africa/Lagos' },
-                { name: '아크라', country: '가나', timezone: 'Africa/Accra' },
-                { name: '다카르', country: '세네갈', timezone: 'Africa/Dakar' },
-                { name: '아비장', country: '코트디부아르', timezone: 'Africa/Abidjan' },
-                { name: '나이로비', country: '케냐', timezone: 'Africa/Nairobi' },
-                { name: '아디스아바바', country: '에티오피아', timezone: 'Africa/Addis_Ababa' },
-                { name: '다르에스살람', country: '탄자니아', timezone: 'Africa/Dar_es_Salaam' },
-                { name: '캄팔라', country: '우간다', timezone: 'Africa/Kampala' },
-                { name: '키갈리', country: '르완다', timezone: 'Africa/Kigali' },
-                { name: '루사카', country: '잠비아', timezone: 'Africa/Lusaka' },
-                { name: '하라레', country: '짐바브웨', timezone: 'Africa/Harare' },
-                { name: '요하네스버그', country: '남아공', timezone: 'Africa/Johannesburg' },
-                { name: '케이프타운', country: '남아공', timezone: 'Africa/Johannesburg' },
-                { name: '더반', country: '남아공', timezone: 'Africa/Johannesburg' },
-                { name: '프리토리아', country: '남아공', timezone: 'Africa/Johannesburg' },
+                { name: '카이로', country: '이집트', timezone: 'Africa/Cairo', lat: 30.0444, lng: 31.2357 },
+                { name: '알렉산드리아', country: '이집트', timezone: 'Africa/Cairo', lat: 31.2001, lng: 29.9187 },
+                { name: '카사블랑카', country: '모로코', timezone: 'Africa/Casablanca', lat: 33.5731, lng: -7.5898 },
+                { name: '마라케시', country: '모로코', timezone: 'Africa/Casablanca', lat: 31.6295, lng: -7.9811 },
+                { name: '알제', country: '알제리', timezone: 'Africa/Algiers', lat: 36.7538, lng: 3.0588 },
+                { name: '튀니스', country: '튀니지', timezone: 'Africa/Tunis', lat: 36.8065, lng: 10.1815 },
+                { name: '트리폴리', country: '리비아', timezone: 'Africa/Tripoli', lat: 32.8872, lng: 13.1913 },
+                { name: '라고스', country: '나이지리아', timezone: 'Africa/Lagos', lat: 6.5244, lng: 3.3792 },
+                { name: '아부자', country: '나이지리아', timezone: 'Africa/Lagos', lat: 9.0765, lng: 7.3986 },
+                { name: '아크라', country: '가나', timezone: 'Africa/Accra', lat: 5.6037, lng: -0.1870 },
+                { name: '다카르', country: '세네갈', timezone: 'Africa/Dakar', lat: 14.7167, lng: -17.4677 },
+                { name: '아비장', country: '코트디부아르', timezone: 'Africa/Abidjan', lat: 5.3600, lng: -4.0083 },
+                { name: '나이로비', country: '케냐', timezone: 'Africa/Nairobi', lat: -1.2921, lng: 36.8219 },
+                { name: '아디스아바바', country: '에티오피아', timezone: 'Africa/Addis_Ababa', lat: 9.0320, lng: 38.7469 },
+                { name: '다르에스살람', country: '탄자니아', timezone: 'Africa/Dar_es_Salaam', lat: -6.7924, lng: 39.2083 },
+                { name: '캄팔라', country: '우간다', timezone: 'Africa/Kampala', lat: 0.3476, lng: 32.5825 },
+                { name: '키갈리', country: '르완다', timezone: 'Africa/Kigali', lat: -1.9403, lng: 29.8739 },
+                { name: '루사카', country: '잠비아', timezone: 'Africa/Lusaka', lat: -15.3875, lng: 28.3228 },
+                { name: '하라레', country: '짐바브웨', timezone: 'Africa/Harare', lat: -17.8252, lng: 31.0335 },
+                { name: '요하네스버그', country: '남아공', timezone: 'Africa/Johannesburg', lat: -26.2041, lng: 28.0473 },
+                { name: '케이프타운', country: '남아공', timezone: 'Africa/Johannesburg', lat: -33.9249, lng: 18.4241 },
+                { name: '더반', country: '남아공', timezone: 'Africa/Johannesburg', lat: -29.8587, lng: 31.0218 },
+                { name: '프리토리아', country: '남아공', timezone: 'Africa/Johannesburg', lat: -25.7479, lng: 28.2293 },
             ],
             oceania: [
-                { name: '시드니', country: '호주', timezone: 'Australia/Sydney' },
-                { name: '멜버른', country: '호주', timezone: 'Australia/Melbourne' },
-                { name: '브리즈번', country: '호주', timezone: 'Australia/Brisbane' },
-                { name: '퍼스', country: '호주', timezone: 'Australia/Perth' },
-                { name: '애들레이드', country: '호주', timezone: 'Australia/Adelaide' },
-                { name: '캔버라', country: '호주', timezone: 'Australia/Sydney' },
-                { name: '오클랜드', country: '뉴질랜드', timezone: 'Pacific/Auckland' },
-                { name: '웰링턴', country: '뉴질랜드', timezone: 'Pacific/Auckland' },
-                { name: '크라이스트처치', country: '뉴질랜드', timezone: 'Pacific/Auckland' },
-                { name: '수바', country: '피지', timezone: 'Pacific/Fiji' },
-                { name: '포트모르즈비', country: '파푸아뉴기니', timezone: 'Pacific/Port_Moresby' },
-                { name: '누메아', country: '뉴칼레도니아', timezone: 'Pacific/Noumea' },
+                { name: '시드니', country: '호주', timezone: 'Australia/Sydney', lat: -33.8688, lng: 151.2093 },
+                { name: '멜버른', country: '호주', timezone: 'Australia/Melbourne', lat: -37.8136, lng: 144.9631 },
+                { name: '브리즈번', country: '호주', timezone: 'Australia/Brisbane', lat: -27.4698, lng: 153.0251 },
+                { name: '퍼스', country: '호주', timezone: 'Australia/Perth', lat: -31.9505, lng: 115.8605 },
+                { name: '애들레이드', country: '호주', timezone: 'Australia/Adelaide', lat: -34.9285, lng: 138.6007 },
+                { name: '캔버라', country: '호주', timezone: 'Australia/Sydney', lat: -35.2809, lng: 149.1300 },
+                { name: '오클랜드', country: '뉴질랜드', timezone: 'Pacific/Auckland', lat: -36.8485, lng: 174.7633 },
+                { name: '웰링턴', country: '뉴질랜드', timezone: 'Pacific/Auckland', lat: -41.2865, lng: 174.7762 },
+                { name: '크라이스트처치', country: '뉴질랜드', timezone: 'Pacific/Auckland', lat: -43.5321, lng: 172.6362 },
+                { name: '수바', country: '피지', timezone: 'Pacific/Fiji', lat: -18.1248, lng: 178.4501 },
+                { name: '포트모르즈비', country: '파푸아뉴기니', timezone: 'Pacific/Port_Moresby', lat: -9.4438, lng: 147.1803 },
+                { name: '누메아', country: '뉴칼레도니아', timezone: 'Pacific/Noumea', lat: -22.2758, lng: 166.4580 },
             ]
         };
 
         const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         let currentFilter = 'all';
         let showUTCMode = false;
+        let currentView = 'list';
+        let map = null;
+        let markers = [];
+
+        function getMarkerColor(utcOffsetMinutes) {
+            const hours = utcOffsetMinutes / 60;
+            
+            if (hours >= -12 && hours < -6) return '#e74c3c'; // 빨강
+            if (hours >= -6 && hours < -1) return '#f39c12'; // 주황
+            if (hours >= -1 && hours <= 3) return '#2ecc71'; // 초록
+            if (hours > 3 && hours <= 7) return '#3498db'; // 파랑
+            if (hours > 7 && hours <= 14) return '#9b59b6'; // 보라
+            
+            return '#95a5a6'; // 회색 (기본)
+        }
 
         function getUTCOffset(timezone, date) {
             const localDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
@@ -516,6 +692,109 @@
             return (localDate - utcDate) / (1000 * 60);
         }
 
+        function initMap() {
+            if (map) return;
+            
+            map = L.map('map').setView([20, 0], 2);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18,
+            }).addTo(map);
+        }
+
+        function updateMapMarkers() {
+            if (!map) return;
+            
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            
+            const now = new Date();
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            
+            for (const [region, cityList] of Object.entries(cities)) {
+                if (currentFilter !== 'all' && currentFilter !== region) continue;
+                
+                cityList.forEach(city => {
+                    const matches = searchTerm === '' || 
+                                  city.name.toLowerCase().includes(searchTerm) ||
+                                  city.country.toLowerCase().includes(searchTerm);
+                    
+                    if (!matches) return;
+                    
+                    const utcOffsetMinutes = getUTCOffsetMinutes(city.timezone, now);
+                    const markerColor = getMarkerColor(utcOffsetMinutes);
+                    
+                    const icon = L.divIcon({
+                        className: 'custom-marker',
+                        html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    });
+                    
+                    const marker = L.marker([city.lat, city.lng], { icon: icon }).addTo(map);
+                    
+                    const timeString = now.toLocaleTimeString('ko-KR', {
+                        timeZone: showUTCMode ? 'UTC' : city.timezone,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                    
+                    const dateString = now.toLocaleDateString('ko-KR', {
+                        timeZone: showUTCMode ? 'UTC' : city.timezone,
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'short'
+                    });
+                    
+                    const utcOffset = getUTCOffset(city.timezone, now);
+                    const hasDST = isDST(city.timezone, now);
+                    
+                    const popupContent = `
+                        <div class="popup-content">
+                            <div class="popup-city">${city.name}</div>
+                            <div class="popup-country">${city.country}</div>
+                            <div class="popup-time">${timeString}</div>
+                            <div class="popup-date">${dateString}</div>
+                            <div class="popup-utc">${utcOffset} ${hasDST ? '(서머타임 적용 중)' : ''}</div>
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(popupContent);
+                    markers.push(marker);
+                });
+            }
+        }
+
+        function switchView(view) {
+            currentView = view;
+            
+            document.querySelectorAll('.view-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (view === 'map') {
+                document.getElementById('mapView').classList.add('active');
+                document.getElementById('listView').classList.remove('active');
+                
+                if (!map) {
+                    initMap();
+                }
+                
+                setTimeout(() => {
+                    map.invalidateSize();
+                    updateMapMarkers();
+                }, 100);
+            } else {
+                document.getElementById('mapView').classList.remove('active');
+                document.getElementById('listView').classList.add('active');
+            }
+        }
+
         function updateUTCReference() {
             const now = new Date();
             
@@ -540,7 +819,7 @@
         }
 
         function updateClocks() {
-            const container = document.getElementById('clockContainer');
+            const container = document.getElementById('listView');
             const searchTerm = document.getElementById('searchBox').value.toLowerCase();
             let totalCities = 0;
             let visibleCities = 0;
@@ -653,14 +932,18 @@
             });
             event.target.classList.add('active');
 
-            if (region === 'all') {
-                document.querySelectorAll('.region-section').forEach(section => {
-                    section.style.display = 'block';
-                });
+            if (currentView === 'list') {
+                if (region === 'all') {
+                    document.querySelectorAll('.region-section').forEach(section => {
+                        section.style.display = 'block';
+                    });
+                } else {
+                    document.querySelectorAll('.region-section').forEach(section => {
+                        section.style.display = section.id === region ? 'block' : 'none';
+                    });
+                }
             } else {
-                document.querySelectorAll('.region-section').forEach(section => {
-                    section.style.display = section.id === region ? 'block' : 'none';
-                });
+                updateMapMarkers();
             }
         }
 
@@ -669,16 +952,27 @@
             const toggle = document.getElementById('utcToggle');
             toggle.classList.toggle('active');
             updateClocks();
+            if (currentView === 'map') {
+                updateMapMarkers();
+            }
         }
 
-        document.getElementById('searchBox').addEventListener('input', updateClocks);
+        document.getElementById('searchBox').addEventListener('input', () => {
+            updateClocks();
+            if (currentView === 'map') {
+                updateMapMarkers();
+            }
+        });
 
         updateUTCReference();
         updateClocks();
         setInterval(() => {
             updateUTCReference();
             updateClocks();
+            if (currentView === 'map' && markers.length > 0) {
+                updateMapMarkers();
+            }
         }, 1000);
     </script>
 </body>
-</html> 
+</html>
